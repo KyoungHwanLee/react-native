@@ -11,6 +11,7 @@ import android.util.DisplayMetrics;
 import androidx.annotation.Nullable;
 import androidx.core.view.ViewCompat;
 import com.facebook.react.bridge.ReadableArray;
+import com.facebook.react.bridge.ReadableMap;
 import com.facebook.react.common.MapBuilder;
 import com.facebook.react.module.annotations.ReactModule;
 import com.facebook.react.uimanager.DisplayMetricsHolder;
@@ -61,6 +62,16 @@ public class ReactScrollViewManager extends ViewGroupManager<ReactScrollView>
   @Override
   public ReactScrollView createViewInstance(ThemedReactContext context) {
     return new ReactScrollView(context, mFpsListener);
+  }
+
+  @ReactProp(name = "maintainVisibleContentPosition")
+  public void setMaintainVisibleContentPosition(ReactScrollView view, @Nullable ReadableMap map) {
+    if (map != null) {
+      if (map.hasKey("autoscrollToTopThreshold")) {
+        double autoscrollToTopThreshold = map.getDouble("autoscrollToTopThreshold");
+        view.setMaintainVisibleContentPosition(true, autoscrollToTopThreshold);
+      }
+    }
   }
 
   @ReactProp(name = "scrollEnabled", defaultBoolean = true)

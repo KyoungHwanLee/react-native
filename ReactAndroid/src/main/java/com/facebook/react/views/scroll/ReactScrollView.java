@@ -28,7 +28,10 @@ import com.facebook.react.uimanager.ReactClippingViewGroup;
 import com.facebook.react.uimanager.ReactClippingViewGroupHelper;
 import com.facebook.react.uimanager.ViewProps;
 import com.facebook.react.uimanager.events.NativeGestureUtil;
+import com.facebook.react.views.view.OnNewChildLayoutListener;
 import com.facebook.react.views.view.ReactViewBackgroundManager;
+import com.facebook.react.views.view.ReactViewGroup;
+
 import java.lang.reflect.Field;
 import java.util.List;
 
@@ -42,6 +45,7 @@ import java.util.List;
 public class ReactScrollView extends ScrollView
     implements ReactClippingViewGroup,
         ViewGroup.OnHierarchyChangeListener,
+        OnNewChildLayoutListener,
         View.OnLayoutChangeListener {
 
   private static @Nullable Field sScrollerField;
@@ -72,6 +76,8 @@ public class ReactScrollView extends ScrollView
   private boolean mSnapToEnd = true;
   private View mContentView;
   private ReactViewBackgroundManager mReactBackgroundManager;
+  private boolean mMaintainVisibleContentPosition = false;
+  private double mAutoscrollToTopThreshold = 0;
 
   public ReactScrollView(ReactContext context) {
     this(context, null);
@@ -136,6 +142,15 @@ public class ReactScrollView extends ScrollView
 
   public void setScrollEnabled(boolean scrollEnabled) {
     mScrollEnabled = scrollEnabled;
+  }
+
+  public void setMaintainVisibleContentPosition(boolean yn, double autoscrollToTopThreshold) {
+    mMaintainVisibleContentPosition = yn;
+    mAutoscrollToTopThreshold = autoscrollToTopThreshold;
+  }
+
+  public boolean getMaintainVisibleContentPosition() {
+    return mMaintainVisibleContentPosition;
   }
 
   public void setPagingEnabled(boolean pagingEnabled) {
@@ -731,11 +746,26 @@ public class ReactScrollView extends ScrollView
   public void onChildViewAdded(View parent, View child) {
     mContentView = child;
     mContentView.addOnLayoutChangeListener(this);
+    if (mContentView instanceof ReactViewGroup) {
+      ((ReactViewGroup) mContentView).setOnNewChildLayoutLinstener(this);
+    }
+  }
+
+  @Override
+  public void onNewChildLayout(View view) {
+    int currentScrollY = getScrollY();
+    if (currentScrollY > mAutoscrollToTopThreshold) {
+      int height = view.getHeight();
+      scrollTo(getScrollX(), height + currentScrollY);
+    }
   }
 
   @Override
   public void onChildViewRemoved(View parent, View child) {
     mContentView.removeOnLayoutChangeListener(this);
+    if (mContentView instanceof ReactViewGroup) {
+      ((ReactViewGroup) mContentView).removeOnNewChildLayoutListener();
+    }
     mContentView = null;
   }
 
@@ -744,6 +774,7 @@ public class ReactScrollView extends ScrollView
    * after the content resizes. Without this, the user would see a blank ScrollView when the scroll
    * position is larger than the ScrollView's max scroll position after the content shrinks.
    */
+
   @Override
   public void onLayoutChange(
       View v,

@@ -19,6 +19,7 @@ import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.LayerDrawable;
 import android.os.Build;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
@@ -44,6 +45,7 @@ import com.facebook.react.uimanager.RootView;
 import com.facebook.react.uimanager.RootViewUtil;
 import com.facebook.react.uimanager.ViewGroupDrawingOrderHelper;
 import com.facebook.react.uimanager.ViewProps;
+import com.facebook.react.views.scroll.ReactScrollView;
 import com.facebook.yoga.YogaConstants;
 
 /**
@@ -57,6 +59,7 @@ public class ReactViewGroup extends ViewGroup
         ReactHitSlopView,
         ReactZIndexedViewGroup {
 
+  private static final String MAINTAIN_VISIBLE_POSITION = "MVP";
   private static final int ARRAY_CAPACITY_INCREMENT = 12;
   private static final int DEFAULT_BACKGROUND_COLOR = Color.TRANSPARENT;
   private static final LayoutParams sDefaultLayoutParam = new ViewGroup.LayoutParams(0, 0);
@@ -90,6 +93,15 @@ public class ReactViewGroup extends ViewGroup
         int oldTop,
         int oldRight,
         int oldBottom) {
+      if (v.getTag() == MAINTAIN_VISIBLE_POSITION) {
+        if (mParent.getParent() != null && mParent.getParent() instanceof ReactScrollView) {
+          if (((ReactScrollView) mParent.getParent()).getMaintainVisibleContentPosition()) {
+            mParent.onNewChildLayoutListener.onNewChildLayout(v);
+            v.setTag(null);
+          }
+        }
+      }
+
       if (mParent.getRemoveClippedSubviews()) {
         mParent.updateSubviewClipStatus(v);
       }
@@ -120,6 +132,7 @@ public class ReactViewGroup extends ViewGroup
   private int mLayoutDirection;
   private float mBackfaceOpacity = 1.f;
   private String mBackfaceVisibility = "visible";
+  private OnNewChildLayoutListener onNewChildLayoutListener = null;
 
   public ReactViewGroup(Context context) {
     super(context);
@@ -574,6 +587,14 @@ public class ReactViewGroup extends ViewGroup
     return -1;
   }
 
+  public void setOnNewChildLayoutLinstener(OnNewChildLayoutListener listener) {
+    this.onNewChildLayoutListener = listener;
+  }
+
+  public void removeOnNewChildLayoutListener() {
+    this.onNewChildLayoutListener = null;
+  }
+
   private void addInArray(View child, int index) {
     View[] children = Assertions.assertNotNull(mAllChildren);
     final int count = mAllChildrenCount;
@@ -586,6 +607,14 @@ public class ReactViewGroup extends ViewGroup
       }
       children[mAllChildrenCount++] = child;
     } else if (index < count) {
+      if (this.getParent() != null) {
+        if (this.getParent() instanceof ReactScrollView) {
+          if (((ReactScrollView)this.getParent()).getMaintainVisibleContentPosition()) {
+            child.setTag(MAINTAIN_VISIBLE_POSITION);
+          }
+        }
+      }
+
       if (size == count) {
         mAllChildren = new View[size + ARRAY_CAPACITY_INCREMENT];
         System.arraycopy(children, 0, mAllChildren, 0, index);

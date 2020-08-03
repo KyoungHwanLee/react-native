@@ -850,13 +850,13 @@ public class ReactScrollView extends ScrollView
       if (Math.abs(deltaY) > 1) {
           int scrollYTo = getScrollY() + deltaY;
 
-          reactScrollTo(getScrollX(), scrollYTo);
+          scrollTo(getScrollX(), scrollYTo);
 
           Integer autoScrollThreshold = maintainVisibleContentPositionData.autoScrollToTopThreshold;
           if (autoScrollThreshold != null) {
               // If the offset WAS within the threshold of the start, animate to the start.
               if (currentScrollY - deltaY <= autoScrollThreshold) {
-                  reactSmoothScrollTo(getScrollX(), 0);
+                  scrollTo(getScrollX(), 0);
               }
           }
       }
